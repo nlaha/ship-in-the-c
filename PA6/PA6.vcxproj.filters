@@ -53,4 +53,20 @@
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>
+  <ItemGroup>
+    <Media Include="music.wav">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="click.wav">
+      <Filter>Resource Files</Filter>
+    </Media>
+    <Media Include="explosion.wav">
+      <Filter>Resource Files</Filter>
+    </Media>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="game.log">
+      <Filter>Resource Files</Filter>
+    </Text>
+  </ItemGroup>
 </Project>

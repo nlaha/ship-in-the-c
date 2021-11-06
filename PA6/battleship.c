@@ -7,21 +7,27 @@ Player players[2];
 int current_player;
 GameState current_state;
 int turn_done = 0;
+
+Cell *target_cell = NULL;
+int spiral_x = 0;
+int spiral_y = 0;
+int spiral_dir_x = 0;
+int spiral_dir_y = 0;
+
 CurrentGameStats cgame_stats = {
 	0,
 	0,
 	NUM_SHIPS,
 	0,
 	0,
-	NUM_SHIPS
-};
+	NUM_SHIPS};
 
 int ship_placement_index = 0;
 int winner = -1;
 int play_again = 0;
 
 /// <summary>
-/// General game loop, called on WM_PAINT
+/// General game loop, called on WM_PComputerNT
 /// </summary>
 void UpdateGame(HWND hwnd)
 {
@@ -36,20 +42,25 @@ void UpdateGame(HWND hwnd)
 		current_player = 0;
 		break;
 	case DEFENDING:
-		// AI is doing it's turn during defending state
+		// Computer is doing it's turn during defending state
 		current_player = 1;
 		break;
 	}
 
-	if (cgame_stats.enemy_ships == 0) {
+	if (cgame_stats.human_ships == 0)
+	{
 		winner = 1;
+		fprintf(GetLogfile(), "Computer wins!\n");
 	}
 
-	if (cgame_stats.human_ships == 0) {
+	if (cgame_stats.enemy_ships == 0)
+	{
 		winner = 0;
+		fprintf(GetLogfile(), "Human wins!\n");
 	}
 
-	if (winner != -1) {
+	if (winner != -1)
+	{
 		current_state = GAMEOVER;
 	}
 }
@@ -79,7 +90,7 @@ void RotatePlacementShip()
 }
 
 /// <summary>
-/// Called when a player clicks in placement mode, 
+/// Called when a player clicks in placement mode,
 /// handles ship placement and player selection
 /// </summary>
 /// <param name="hwnd"></param>
@@ -93,12 +104,14 @@ void PlacementMode(HWND hwnd)
 		PushMessage(L"Randomly selecting player...");
 		if (rand() & 1)
 		{
+			fprintf(GetLogfile(), "Computer is going first\n");
 			PushMessage(L"Computer is going first!");
 			PushMessage(L"CLICK TO CONTINUE");
 			current_state = DEFENDING;
 		}
 		else
 		{
+			fprintf(GetLogfile(), "Human is going first\n");
 			PushMessage(L"Human is going first!");
 			PushMessage(L"Click on a cell to shoot");
 			current_state = TARGETING;
@@ -127,6 +140,7 @@ void PlacementMode(HWND hwnd)
 
 	if (invalid == 0)
 	{
+		fprintf(GetLogfile(), "Human placed ship at (%d, %d)\n", clickedCell->x, clickedCell->y);
 		ship->state = ALIVE;
 		for (int i = 0; i < shipLength; i++)
 		{
@@ -160,21 +174,27 @@ void TargetingMode(HWND hwnd)
 	// get on opposing player's board
 	clickedCell = GetCellNearPixel(cur.x, cur.y, 1);
 
-	if (clickedCell->state == NONE) {
+	if (clickedCell->state == NONE)
+	{
 		if (clickedCell->ship != NULL)
 		{
 			// hit!
+			//PlaySound(TEXT("explosion.wav"), NULL, SND_ASYNC);
 			clickedCell->state = HIT;
 			clickedCell->ship->num_hit_cells++;
 			cgame_stats.human_hits++;
 			PushMessage(L"HIT! Click to fire again!");
+			fprintf(GetLogfile(), "Human hit Computer ship at (%d, %d)\n", clickedCell->x, clickedCell->y);
 			// don't end turn until the player doesn't hit a ship
 
 			// check the status of the enemy's ships
 			for (int i = 0; i < NUM_SHIPS; i++)
 			{
-				if (players[1].ships[i].state == ALIVE) {
-					if (players[1].ships[i].num_hit_cells >= players[1].ships[i].health) {
+				if (players[1].ships[i].state == ALIVE)
+				{
+					if (players[1].ships[i].num_hit_cells >= players[1].ships[i].type + 1)
+					{
+						fprintf(GetLogfile(), "Enemy ship destroyed!\n");
 						PushMessage(L"Enemy ship destroyed!");
 						cgame_stats.enemy_ships--;
 						players[1].ships[i].state = DEAD;
@@ -185,8 +205,10 @@ void TargetingMode(HWND hwnd)
 		else
 		{
 			// miss
+			//PlaySound(TEXT("click.wav"), NULL, SND_ASYNC);
 			cgame_stats.human_misses++;
 			clickedCell->state = MISS;
+			fprintf(GetLogfile(), "Human missed at (%d, %d)\n", clickedCell->x, clickedCell->y);
 			PushMessage(L"MISS! CLICK TO CONTINUE");
 			turn_done = 1;
 		}
@@ -194,31 +216,48 @@ void TargetingMode(HWND hwnd)
 }
 
 /// <summary>
-/// This function represents the AI's turn, it's called whenever the AI 
+/// This function represents the Computer's turn, it's called whenever the Computer
 /// needs to shoot at the human player's board
 /// </summary>
 /// <param name="hwnd"></param>
-void AIMove(hwnd)
+void ComputerMove(hwnd)
 {
 	Cell *cell = NULL;
 
 	while (cell == NULL || cell->state == NONE)
 	{
-		cell = GetCell(rand() % (SCREENBUFFER_RESX / GRID_SIZE), rand() % (SCREENBUFFER_RESY / GRID_SIZE), 0);
+		if (target_cell == NULL)
+		{
+			cell = GetCell(rand() % (SCREENBUFFER_RESX / GRID_SIZE), rand() % (SCREENBUFFER_RESY / GRID_SIZE), 0);
+		}
+		else
+		{
+			// try to find the rest of the ship by checking the adjacent cells, vector should be random
+			int x = target_cell->x + (rand() % 3 - 1);
+			int y = target_cell->y + (rand() % 3 - 1);
+			cell = GetCell(x, y, 0);
+		}
+
 		if (cell->ship != NULL)
 		{
 			// hit!
+			target_cell = cell;
+			fprintf(GetLogfile(), "Computer hit human ship at (%d, %d)\n", cell->x, cell->y);
 			cell->state = HIT;
 			cell->ship->num_hit_cells++;
 			cgame_stats.enemy_hits++;
-			// let the AI fire again
+			// let the Computer fire again
 
 			// check the status of the human's ships
 			for (int i = 0; i < NUM_SHIPS; i++)
 			{
-				if (players[0].ships[i].state == ALIVE) {
-					if (players[0].ships[i].num_hit_cells >= players[0].ships[i].health) {
+				if (players[0].ships[i].state == ALIVE)
+				{
+					if (players[0].ships[i].num_hit_cells >= players[0].ships[i].type + 1)
+					{
+						fprintf(GetLogfile(), "Human ship destroyed!\n");
 						PushMessage(L"Human ship destroyed!");
+						target_cell = NULL;
 						cgame_stats.human_ships--;
 						players[0].ships[i].state = DEAD;
 					}
@@ -231,6 +270,7 @@ void AIMove(hwnd)
 		{
 			// miss
 			cgame_stats.enemy_misses++;
+			fprintf(GetLogfile(), "Computer missed at (%d, %d)\n", cell->x, cell->y);
 			PushMessage(L"MISS! CLICK TO CONTINUE");
 			cell->state = MISS;
 			turn_done = 1;
@@ -278,6 +318,7 @@ void RandomizeShips(Player *player)
 			.num_hit_cells = 0,
 			.vector = {randDir, !randDir},
 		};
+
 		player->ships[s] = ship;
 	}
 }
@@ -292,11 +333,36 @@ void RandomizeBoard(Player *player, Board *board)
 
 	for (int i = 0; i < NUM_SHIPS; i++)
 	{
+		int valid = 0;
+
 		Ship *ship = &player->ships[i];
 		ship->state = ALIVE;
-		int x = rand() % boardresx - 1;
-		int y = rand() % boardresy - 1;
+		int x = 0;
+		int y = 0;
+		while (valid == 0)
+		{
+			x = rand() % boardresx - 1;
+			y = rand() % boardresy - 1;
 
+			// make sure, taking into account the ship vector and length that the ship isn't going off the board
+			// also check if the ship is overlapping with another ship
+			if (x + ship->vector.x * ship->health < boardresx && x + ship->vector.x * ship->health >= 0 &&
+				y + ship->vector.y * ship->health < boardresy && y + ship->vector.y * ship->health >= 0)
+			{
+				valid = 1;
+				for (int j = 0; j < ship->health; j++)
+				{
+					Cell *cell = &board->board[x + ship->vector.x * j][y + ship->vector.y * j];
+					if (cell->ship != NULL)
+					{
+						valid = 0;
+						break;
+					}
+				}
+			}
+		}
+
+		fprintf(GetLogfile(), "Computer placing ship at (%d, %d)\n", x, y);
 		for (int j = 0; j < ship->health; j++)
 		{
 			board->board[x + (j * ship->vector.x)][y + (j * ship->vector.y)].ship = ship;

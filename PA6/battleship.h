@@ -22,7 +22,7 @@ void UpdateGame(HWND hwnd);
 void RotatePlacementShip();
 void PlacementMode(HWND hwnd);
 void TargetingMode(HWND hwnd);
-void AIMove(HWND hwnd);
+void ComputerMove(HWND hwnd);
 
 void ClearBoards();
 void RandomizeBoard(Player* player, Board* board);

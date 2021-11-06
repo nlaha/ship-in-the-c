@@ -4,6 +4,7 @@ Pixel screen_buffer[SCREENBUFFER_RESX][SCREENBUFFER_RESY];
 
 int counter = 0;
 clock_t deltaTime = 0;
+FILE *logfile = NULL;
 
 wchar_t *message_log[MESSAGE_LOG_SIZE];
 
@@ -36,7 +37,7 @@ POINT GetMouseInGrid(HWND hwnd)
     GetClientRect(hwnd, &r);
 
     float psize = (r.bottom - r.top) / (double)SCREENBUFFER_RESY;
-    float center_offset = ((r.right - (r.left - 200)) / 2) - (SCREENBUFFER_RESX / 2) * psize;
+    float center_offset = ((r.right - (r.left - 400)) / 2) - (SCREENBUFFER_RESX / 2) * psize;
 
     cur.x = cur.x / psize - (center_offset / psize);
     cur.y = cur.y / psize;
@@ -66,7 +67,7 @@ void Render(HWND hwnd)
     clock_t beginFrame = clock();
 
     float psize = (r.bottom - r.top) / (double)SCREENBUFFER_RESY;
-    float center_offset = ((r.right - (r.left - 200)) / 2) - (SCREENBUFFER_RESX / 2) * psize;
+    float center_offset = ((r.right - (r.left - 400)) / 2) - (SCREENBUFFER_RESX / 2) * psize;
 
     POINT cur = GetMouseInGrid(hwnd);
 
@@ -99,15 +100,15 @@ void Render(HWND hwnd)
     }
     else if (current_state == GAMEOVER)
     {
-        if (winner == 1) {
+        if (winner == 1)
+        {
             // computer won
             DrawImage(0, 0, "background_lose.bmp", memdc);
-            PushMessage(L"Click to play again!");
         }
-        else if (winner == 0) {
+        else if (winner == 0)
+        {
             // human won
             DrawImage(0, 0, "background_win.bmp", memdc);
-            PushMessage(L"Click to play again!");
         }
     }
     else
@@ -430,10 +431,27 @@ void PushMessage(wchar_t *message)
         message_log[i] = message_log[i - 1];
     }
 
-    if (current_state != WELCOME && current_state != GAMEOVER) {
+    if (current_state != WELCOME && current_state != GAMEOVER)
+    {
         message_log[0] = message_log_entry;
     }
-    else {
+    else
+    {
         message_log[0] = message;
     }
+}
+
+void StartLogging()
+{
+    logfile = fopen("game.log", "w");
+}
+
+FILE *GetLogfile()
+{
+    return logfile;
+}
+
+void EndLogging()
+{
+    fclose(logfile);
 }

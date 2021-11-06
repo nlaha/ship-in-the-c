@@ -32,5 +32,8 @@ extern wchar_t* message_log[MESSAGE_LOG_SIZE];
 void DrawImage(int x, int y, char* filename, HDC hdc);
 void DrawSprite(int x, int y, int sprite[8][8], HDC hdc);
 void PushMessage(wchar_t* message);
+void StartLogging();
+FILE* GetLogfile();
+void EndLogging();
 
 #endif

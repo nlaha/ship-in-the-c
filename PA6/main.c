@@ -16,12 +16,15 @@
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 HBRUSH background_brush = NULL;
 
+void RestartGame();
+
 // Main function (program entrypoint like void main() but for windowed programs)
 int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
-    PWSTR lpCmdLine, int nCmdShow) {
+                    PWSTR lpCmdLine, int nCmdShow)
+{
 
-    MSG  msg;
-    WNDCLASSW wc = { 0 };
+    MSG msg;
+    WNDCLASSW wc = {0};
     srand((unsigned int)time(NULL));
 
     background_brush = CreateSolidBrush(RGB(0, 0, 0));
@@ -35,35 +38,43 @@ int WINAPI wWinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
     RegisterClassW(&wc);
     CreateWindowW(wc.lpszClassName, L"Battleship",
-        WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-        100, 100, 1280, 720, NULL, NULL, hInstance, NULL);
+                  WS_OVERLAPPEDWINDOW | WS_VISIBLE,
+                  100, 100, 1280, 720, NULL, NULL, hInstance, NULL);
 
-    while (GetMessage(&msg, NULL, 0, 0)) {
+    while (GetMessage(&msg, NULL, 0, 0))
+    {
 
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
 
-    if (background_brush) {
+    if (background_brush)
+    {
         DeleteObject(background_brush);
     }
 
     return (int)msg.wParam;
 }
 
-void RestartGame();
-
 // callback
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg,
-    WPARAM wParam, LPARAM lParam) {
+                         WPARAM wParam, LPARAM lParam)
+{
 
-    switch (msg) {
+    switch (msg)
+    {
     case WM_CREATE:
+
+        StartLogging();
+        fprintf(GetLogfile(), "Starting Game Engine\n");
+
+        // play music in background
+        PlaySound(TEXT("music.wav"), NULL, SND_ASYNC | SND_LOOP);
 
         // init game logic
         // clear boards
         ClearBoards();
-        
+
         // generate ships for both players
         RandomizeShips(&players[0]);
         RandomizeShips(&players[1]);
@@ -87,9 +98,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg,
         UpdateGame(hwnd);
 
         // render framebuffer
-        // this allows for resizing the window 
+        // this allows for resizing the window
         // while keeping a consistant aspect ratio
-        if (!IsIconic(hwnd)) {
+        if (!IsIconic(hwnd))
+        {
             Render(hwnd);
         }
 
@@ -105,8 +117,10 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg,
         return 0;
 
     case WM_LBUTTONDOWN:
-        switch (current_state) {
+        switch (current_state)
+        {
         case WELCOME:
+            fprintf(GetLogfile(), "Starting Game\n");
             PushMessage(L"Entering placement mode");
             PushMessage(L"press ENTER to rotate a ship");
             current_state = PLACING;
@@ -118,22 +132,26 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg,
             PlacementMode(hwnd);
             break;
         case TARGETING:
-            if (turn_done) {
+            if (turn_done)
+            {
                 PushMessage(L"CLICK TO CONTINUE");
                 current_state = DEFENDING;
                 turn_done = 0;
             }
-            else {
+            else
+            {
                 TargetingMode(hwnd);
             }
             break;
         case DEFENDING:
-            if (turn_done) {
+            if (turn_done)
+            {
                 current_state = TARGETING;
                 turn_done = 0;
             }
-            else {
-                AIMove(hwnd);
+            else
+            {
+                ComputerMove(hwnd);
             }
             break;
         }
@@ -149,6 +167,7 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg,
         return 0;
     case WM_DESTROY:
 
+        EndLogging();
         PostQuitMessage(0);
         return 0;
     }
@@ -157,7 +176,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg,
     return DefWindowProcW(hwnd, msg, wParam, lParam);
 }
 
-void RestartGame() {
+void RestartGame()
+{
 
     CurrentGameStats blankStats = {
         0,
@@ -165,8 +185,7 @@ void RestartGame() {
         NUM_SHIPS,
         0,
         0,
-        NUM_SHIPS
-    };
+        NUM_SHIPS};
 
     cgame_stats = blankStats;
 
