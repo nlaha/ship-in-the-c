@@ -53,4 +53,4 @@ jobs:
         # Artifact name
         name: ship-in-the-c
         # A file, directory or wildcard pattern that describes what to upload
-        path: ${{env.GITHUB_WORKSPACE}}/x64/Release
+        path: ${{env.GITHUB_WORKSPACE}}\x64\${{env.BUILD_CONFIGURATION}}\
