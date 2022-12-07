@@ -10,7 +10,7 @@ on:
       build_config:
         description: 'Build Configuration'
         required: true
-        default: 'warning'
+        default: 'Release'
         type: choice
         options:
         - Release
